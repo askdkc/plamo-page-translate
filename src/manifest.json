@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "PLaMo Page Translate",
+  "version": "0.1.0",
+  "description": "PLaMoのGGUFモデルを内蔵。ページ全体を端末内で翻訳します。Built with PLaMo.",
+  "minimum_chrome_version": "137",
+  "permissions": ["activeTab", "scripting", "offscreen", "storage"],
+  "action": { "default_popup": "popup.html", "default_title": "ページ全体を翻訳" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; worker-src 'self'; connect-src 'self';"
+  },
+  "cross_origin_embedder_policy": { "value": "require-corp" },
+  "cross_origin_opener_policy": { "value": "same-origin" }
+}

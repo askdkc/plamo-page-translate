@@ -1,0 +1,22 @@
+# Dependencies and generated output
+/node_modules/
+/dist/
+/release/
+/artifacts/
+/coverage/
+
+# Downloaded model weights and partial downloads
+/models/*.gguf
+/models/*.part
+
+# Local agent state
+/.kiokuko.json
+/.kiokuko/
+/.agenticreplay/
+
+# Local environment and system files
+.env
+.env.*
+!.env.example
+.DS_Store
+npm-debug.log*
