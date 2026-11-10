@@ -1,4 +1,5 @@
 const $ = id => document.getElementById(id);
+$('version').textContent = `v${chrome.runtime.getManifest().version}`;
 let tabId;
 function error(message) { $('status').textContent = message; }
 async function send(type, extra = {}) {

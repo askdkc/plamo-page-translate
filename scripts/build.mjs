@@ -13,6 +13,8 @@ await rm('dist',{recursive:true,force:true});
 await mkdir('dist/vendor',{recursive:true});
 await mkdir('dist/models',{recursive:true});
 await cp('LICENSE','dist/LICENSE');
+await mkdir('dist/icons',{recursive:true});
+for (const size of [16, 32, 48, 128]) await cp(`src/icons/icon-${size}.png`,`dist/icons/icon-${size}.png`);
 for (const file of ['manifest.json','popup.html','popup.css','offscreen.html']) await cp(`src/${file}`,`dist/${file}`);
 for (const file of [model.file,'model.json','LICENSE.en','LICENSE.ja']) await cp(`models/${file}`,`dist/models/${file}`);
 await cp('node_modules/@wllama/wllama/esm/wasm/wllama.wasm','dist/vendor/wllama.wasm');

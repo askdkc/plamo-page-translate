@@ -2,7 +2,7 @@
 <html lang="ja">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLaMo ページ翻訳</title><link rel="stylesheet" href="popup.css"></head>
 <body>
-  <header><span class="mark" aria-hidden="true">文</span><div><h1>ページ翻訳</h1><p>PLaMo Page Translate</p></div><span class="local">LOCAL</span></header>
+  <header><img class="mark" src="icons/icon-48.png" alt="" width="42" height="42"><div><h1>ページ翻訳</h1><p>PLaMo Page Translate</p></div><span class="local">LOCAL</span></header>
   <main>
     <p class="intro">いま開いているページを、端末内で翻訳。</p>
     <label for="language">翻訳先</label><select id="language"><option value="ja">日本語</option><option value="en">English</option><option value="zh">中文</option><option value="ko">한국어</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="es">Español</option></select>
@@ -11,6 +11,12 @@
     <div class="actions"><button id="stop" disabled>停止</button><button id="restore" disabled>原文に戻す</button></div>
     <p class="hint">翻訳はこの画面を閉じても続きます。追加で読み込まれた文章は、もう一度翻訳してください。</p>
     <details><summary>モデルと利用条件</summary><p>Built with PLaMo<br>PLaMo 3 Translate 0.8B · Q4_K_M<br>GGUFモデル同梱 / 翻訳文の外部送信なし</p><p>個人・非商用利用は無料。業務利用を含む商用利用には登録・契約条件があります。</p><a href="models/LICENSE.ja" target="_blank" rel="noopener">PLaMo Community License</a><p>画像・PDF・コード・入力欄・別ドメインの埋め込み枠は対象外です。</p></details>
+    <details class="about">
+      <summary>この拡張機能について（About）</summary>
+      <p>PLaMo Page Translate <span id="version"></span><br>作者: dkc</p>
+      <p><a href="https://github.com/askdkc/plamo-page-translate" target="_blank" rel="noopener noreferrer">github.com/askdkc/plamo-page-translate</a></p>
+      <p><a href="https://github.com/askdkc/plamo-page-translate/issues" target="_blank" rel="noopener noreferrer">不具合を報告する（GitHub Issues）</a></p>
+    </details>
   </main>
   <footer>Built with PLaMo</footer>
   <script type="module" src="popup.js"></script>
