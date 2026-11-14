@@ -19,6 +19,8 @@ npm run build
 
 Open a web page, click the extension icon, choose a language, and click **ページ全体を翻訳** (Translate entire page). Translation continues when the popup closes. Use **停止** to stop or **原文に戻す** to restore the original text.
 
+Select text and choose **選択部分を翻訳** (Translate selection) from the right-click menu to translate only that part. The result appears in a small popup next to the selection; the page text is not changed.
+
 Images, PDFs, code, and input fields are excluded. Click Translate again for newly loaded content.
 
 [MIT License](LICENSE) · Author: dkc. The bundled model retains its separate [PLaMo Community License](models/LICENSE.en).

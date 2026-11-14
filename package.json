@@ -1,6 +1,6 @@
 {
   "name": "plamobrave",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Offline whole-page translation with bundled PLaMo 3 GGUF",
@@ -11,7 +11,8 @@
     "test:browser": "node scripts/test-browser.mjs",
     "check": "npm test && npm run build",
     "package": "node scripts/package.mjs",
-    "test:dom": "node scripts/test-dom.mjs"
+    "test:dom": "node scripts/test-dom.mjs",
+    "test:selection": "node scripts/test-selection.mjs"
   },
   "dependencies": {
     "@wllama/wllama": "3.13.0"

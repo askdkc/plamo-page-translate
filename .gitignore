@@ -10,7 +10,6 @@
 /models/*.part
 
 # Local agent state
-/.kiokuko.json
 /.kiokuko/
 /.agenticreplay/
 
@@ -20,3 +19,5 @@
 !.env.example
 .DS_Store
 npm-debug.log*
+.kiokuko.json
+.agenticreplay/

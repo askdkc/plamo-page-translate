@@ -1,10 +1,11 @@
 import { PageText } from './page.js';
 import { LANGUAGES, translateEntries } from './translation.js';
+import { openSelectionPopup } from './selection.js';
 
 if (!globalThis.__plamoPageTranslate) {
   globalThis.__plamoPageTranslate = true;
   const page = new PageText(document);
-  let operation = null, banner = null;
+  let operation = null, banner = null, selection = null;
   let status = { phase: 'idle', done: 0, total: 0, message: 'このページを端末内で翻訳できます。', hasTranslations: false };
 
   function setStatus(values) {
@@ -45,7 +46,54 @@ if (!globalThis.__plamoPageTranslate) {
     setStatus({ phase: restore ? 'idle' : 'cancelled', message: restore ? '原文に戻しました。' : '翻訳を停止しました。翻訳済みの部分はそのまま残っています。' });
   }
 
+  // The selection popup and the page banner share one engine owner at a time.
+  function releaseSelection() {
+    const current = selection;
+    if (!current) return Promise.resolve();
+    selection = null;
+    current.controller.abort();
+    current.popup?.close();
+    return request('release', current.id).catch(() => {});
+  }
+
+  async function preferredLanguage() {
+    try {
+      const stored = await chrome.storage.local.get('language');
+      if (Object.hasOwn(LANGUAGES, stored.language)) return stored.language;
+    } catch { /* The saved preference is optional; fall back to Japanese. */ }
+    return 'ja';
+  }
+
+  async function translateSelection(text) {
+    const source = text.trim();
+    if (!source) return;
+    await releaseSelection();
+    const current = { id: '', controller: new AbortController(), popup: null, busy: true };
+    selection = current;
+    try {
+      current.id = crypto.randomUUID();
+      current.popup = openSelectionPopup(document, () => {
+        if (selection !== current) return;
+        void releaseSelection();
+      });
+      current.popup.setMessage('選択部分を翻訳しています…');
+      const language = await preferredLanguage();
+      current.controller.signal.throwIfAborted();
+      await request('begin', current.id);
+      current.controller.signal.throwIfAborted();
+      await translateEntries([{ text: source, apply: translated => current.popup.setTranslation(translated) }],
+        async part => (await request('translate', current.id, { text: part, language })).text,
+        { signal: current.controller.signal });
+    } catch (error) {
+      if (!current.controller.signal.aborted) current.popup?.setError(`翻訳できませんでした: ${error.message}`);
+    } finally {
+      current.busy = false;
+      await request('release', current.id).catch(() => {});
+    }
+  }
+
   async function start(language) {
+    if (selection?.busy) await releaseSelection();
     const op = { id: crypto.randomUUID(), controller: new AbortController() };
     operation = op;
     const entries = page.collect();
@@ -73,6 +121,12 @@ if (!globalThis.__plamoPageTranslate) {
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (sender.id !== chrome.runtime.id || message?.destination !== 'page') return;
     if (message.type === 'status') { respond(status); return; }
+    if (message.type === 'translate-selection') {
+      const text = typeof message.text === 'string' ? message.text : '';
+      if (!text.trim()) { respond({ok:false,error:'選択された文章がありません。'}); return; }
+      void translateSelection(text);
+      respond({ok:true}); return;
+    }
     if (message.type === 'start') {
       if (operation) { respond({ok:false,error:'このページを翻訳中です。'}); return; }
       if (!Object.hasOwn(LANGUAGES, message.language)) { respond({ok:false,error:'言語が不正です。'}); return; }

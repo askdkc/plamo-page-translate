@@ -1,5 +1,6 @@
 let lifecycle = Promise.resolve();
 const engineURL = chrome.runtime.getURL('offscreen.html');
+const SELECTION_MENU_ID = 'plamo-translate-selection';
 
 function withLifecycle(action) {
   const result = lifecycle.then(action, action);
@@ -30,6 +31,32 @@ async function closeEngine(owner) {
     return { ok: true };
   });
 }
+
+// Menus persist across service-worker restarts, so register them when the extension is installed or updated.
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: SELECTION_MENU_ID,
+      title: '選択部分を翻訳',
+      contexts: ['selection'],
+      documentUrlPatterns: ['http://*/*', 'https://*/*'],
+    });
+  });
+});
+
+// The page popup renders the result, so only the selected text travels to the page.
+async function translateSelection(tabId, selectionText) {
+  const text = typeof selectionText === 'string' ? selectionText : '';
+  if (!text.trim()) return;
+  await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: ['content.js'] });
+  const response = await chrome.tabs.sendMessage(tabId, { destination: 'page', type: 'translate-selection', text }, { frameId: 0 });
+  if (response?.ok === false) throw new Error(response.error);
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== SELECTION_MENU_ID || !tab?.id) return;
+  void translateSelection(tab.id, info.selectionText).catch(error => console.warn('選択部分を翻訳できませんでした。', error));
+});
 
 async function dispatch(message, sender) {
   if (!sender.tab || !sender.documentId || !/^[a-zA-Z0-9-]{1,80}$/.test(message.runId || '')) throw new Error('翻訳要求が不正です。');

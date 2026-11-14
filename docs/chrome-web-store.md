@@ -10,7 +10,7 @@
 - Homepage: https://github.com/askdkc/plamo-page-translate
 - Support: https://github.com/askdkc/plamo-page-translate/issues
 - Privacy policy: publish `PRIVACY.md` before using https://github.com/askdkc/plamo-page-translate/blob/main/PRIVACY.md
-- Package: `release/plamo-page-translate-0.1.0.zip`
+- Package: `release/plamo-page-translate-0.2.0.zip`
 - Store icon: `src/icons/icon-128.png`
 - Screenshot: a current, actual extension capture at 1280 × 800 is required before submission.
 
@@ -19,6 +19,8 @@
 PLaMo Page Translate は、いま開いているページの文章を端末内で翻訳する拡張機能です。翻訳モデルを同梱しているため、インストール後は翻訳サービスへの接続や API キーの設定なしで使えます。
 
 拡張機能を開いて翻訳先を選び、「ページ全体を翻訳」を押してください。画面の下にある文章も順番に翻訳します。途中で停止したり、「原文に戻す」で元の文章に戻したりできます。ポップアップを閉じても翻訳は続きます。
+
+ページ内の文章を選択して右クリックし、「選択部分を翻訳」を選ぶと、その部分だけを小さなポップアップで翻訳します。ページの文章は置き換えません。
 
 翻訳先は日本語、英語、中国語、韓国語、フランス語、ドイツ語、スペイン語から選べます。操作画面は日本語です。
 
@@ -40,6 +42,7 @@ Permission justifications:
 - `scripting`: Injects the page translator to collect eligible text, apply translations, display progress, and restore originals.
 - `offscreen`: Hosts the bundled WebAssembly translation engine and workers so translation can continue after the popup closes.
 - `storage`: Saves only the selected target language in `chrome.storage.local`.
+- `contextMenus`: Adds the 「選択部分を翻訳」 item to the page context menu when the user selects text. It appears only on http/https pages and reads nothing until the user chooses it.
 
 Remote code: No. JavaScript, WebAssembly, workers, and model weights are bundled in the uploaded ZIP. The runtime does not download executable code or models.
 
@@ -47,7 +50,7 @@ Data handling: The extension locally processes website content chosen by the use
 
 ## Reviewer instructions
 
-No account, API key, subscription, or separate model download is needed. Install the extension and open an ordinary HTTPS page containing English prose. Open the extension action, choose 日本語, and click ページ全体を翻訳. Wait for model loading and translation; processing is local and may take time. Text should change while links and form inputs remain intact. Close the popup to verify translation continues. Click 原文に戻す in the page banner or popup to restore the original text. 停止 cancels further translation and leaves already translated text visible.
+No account, API key, subscription, or separate model download is needed. Install the extension and open an ordinary HTTPS page containing English prose. Open the extension action, choose 日本語, and click ページ全体を翻訳. Wait for model loading and translation; processing is local and may take time. Text should change while links and form inputs remain intact. Close the popup to verify translation continues. Click 原文に戻す in the page banner or popup to restore the original text. 停止 cancels further translation and leaves already translated text visible. Then select a sentence on the page and choose 選択部分を翻訳 from the right-click menu; the translation appears in a popup beside the selection and the page text stays unchanged.
 
 ## Remaining publication prerequisites
 
