@@ -90,17 +90,28 @@ if (!globalThis.__plamoPageTranslate) {
     if (sender.id !== chrome.runtime.id || message?.destination !== 'page') return;
     if (message.type === 'status') { respond(status); return; }
     if (message.type === 'translate-selection') {
-      const text = typeof message.text === 'string' ? message.text : '';
-      if (!text.trim()) { respond({ok:false,error:'選択された文章がありません。'}); return; }
-      if (operation) { respond({ok:false,error:'このページを翻訳中です。'}); return; }
-      const selected = document.getSelection();
-      if (!selected?.rangeCount || selected.isCollapsed || selected.toString().trim() !== text.trim()) {
-        respond({ok:false,error:'選択範囲を取得できません。ページの文章を選択し直してください。'}); return;
+      try {
+        const text = typeof message.text === 'string' ? message.text : '';
+        if (!text.trim()) throw new Error('選択された文章がありません。');
+        if (operation) {
+          setStatus({ message: '翻訳を実行中です。完了を待つか、停止してください。' });
+          respond({ok:false,error:'このページを翻訳中です。'}); return;
+        }
+        const selected = document.getSelection();
+        // Context-menu text can flatten line breaks and non-breaking spaces.
+        const normalize = value => value.replace(/\s+/gu, ' ').trim();
+        if (!selected?.rangeCount || selected.isCollapsed || normalize(selected.toString()) !== normalize(text)) {
+          throw new Error('選択範囲を取得できません。ページの文章を選択し直してください。');
+        }
+        const entries = page.collect(selected.getRangeAt(0).cloneRange());
+        if (!entries.length) throw new Error('選択範囲に翻訳できる文章がありません。');
+        void start(undefined, entries, '選択部分');
+        respond({ok:true});
+      } catch (error) {
+        setStatus({ phase: 'error', message: `翻訳を開始できませんでした: ${error.message}` });
+        respond({ok:false,error:error.message});
       }
-      const entries = page.collect(selected.getRangeAt(0).cloneRange());
-      if (!entries.length) { respond({ok:false,error:'選択範囲に翻訳できる文章がありません。'}); return; }
-      void start(undefined, entries, '選択部分');
-      respond({ok:true}); return;
+      return;
     }
     if (message.type === 'start') {
       if (operation) { respond({ok:false,error:'このページを翻訳中です。'}); return; }

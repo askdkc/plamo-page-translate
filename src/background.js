@@ -50,12 +50,28 @@ async function translateSelection(tabId, selectionText, frameId = 0) {
   if (!text.trim()) return;
   await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, files: ['content.js'] });
   const response = await chrome.tabs.sendMessage(tabId, { destination: 'page', type: 'translate-selection', text }, { frameId });
-  if (response?.ok === false) throw new Error(response.error);
+  if (!response?.ok) throw new Error(response?.error || 'ページから応答がありません。ページを再読み込みしてください。');
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== SELECTION_MENU_ID || !tab?.id) return;
-  void translateSelection(tab.id, info.selectionText, info.frameId).catch(error => console.warn('選択部分を翻訳できませんでした。', error));
+  void (async () => {
+    await Promise.allSettled([
+      chrome.action.setBadgeText({tabId:tab.id,text:''}),
+      chrome.action.setTitle({tabId:tab.id,title:'PLaMo ページ翻訳'}),
+    ]);
+    try {
+      await translateSelection(tab.id, info.selectionText, info.frameId);
+    } catch (error) {
+      console.warn('選択部分を翻訳できませんでした。', error);
+      // Injection can fail before any page UI exists (e.g. an inaccessible frame).
+      await Promise.allSettled([
+        chrome.action.setBadgeText({tabId:tab.id,text:'!'}),
+        chrome.action.setBadgeBackgroundColor({tabId:tab.id,color:'#b3261e'}),
+        chrome.action.setTitle({tabId:tab.id,title:`翻訳を開始できませんでした: ${error.message}`}),
+      ]);
+    }
+  })();
 });
 
 async function dispatch(message, sender) {

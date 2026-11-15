@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const source=await readFile(new URL('../src/background.js',import.meta.url),'utf8');
-function harness({ failInjection = false } = {}) {
+function harness({ failInjection = false, response = {ok:true} } = {}) {
   let listener, installed, clicked, owner=null, exists=false, loads=0, closes=0, beginResolve;
-  const menus=[], injections=[], sent=[];
+  const menus=[], injections=[], sent=[], badges=[], titles=[];
   const runtime={
     id:'test',getURL:path=>`chrome-extension://test/${path}`,
     getContexts:async()=>exists?[{}]:[],onMessage:{addListener:fn=>{listener=fn;}},
@@ -19,6 +19,7 @@ function harness({ failInjection = false } = {}) {
   };
   const chrome={
     runtime,
+    action:{setBadgeText:async value=>{badges.push(value);},setBadgeBackgroundColor:async()=>{},setTitle:async value=>{titles.push(value);}},
     contextMenus:{
       removeAll:callback=>{menus.length=0;callback?.();},
       create:properties=>{menus.push(properties);return properties.id;},
@@ -26,7 +27,7 @@ function harness({ failInjection = false } = {}) {
     },
     scripting:{executeScript:async options=>{injections.push(options);if(failInjection)throw new Error('このページでは実行できません。');}},
     offscreen:{createDocument:async()=>{exists=true;loads++;},closeDocument:async()=>{exists=false;owner=null;closes++;beginResolve?.({ok:false,error:'closed'});}},
-    tabs:{onRemoved:{addListener(){}},onUpdated:{addListener(){}},sendMessage:async(tabId,message,options)=>{sent.push({tabId,message,options});return {ok:true};}},
+    tabs:{onRemoved:{addListener(){}},onUpdated:{addListener(){}},sendMessage:async(tabId,message,options)=>{sent.push({tabId,message,options});return response;}},
   };
   vm.runInNewContext(source,{chrome,console:{warn(){},log(){},error(){}}});
   return {
@@ -36,6 +37,7 @@ function harness({ failInjection = false } = {}) {
     install:()=>installed?.(),
     click:(info,tab)=>clicked?.(info,tab),
     // The service worker runs in its own realm, so snapshot API arguments as plain JSON.
+    badges:()=>badges, titles:()=>titles,
     menus:()=>JSON.parse(JSON.stringify(menus)),
     injections:()=>JSON.parse(JSON.stringify(injections)),
     sent:()=>JSON.parse(JSON.stringify(sent)),
@@ -91,4 +93,17 @@ test('a page that forbids script injection sends no translation request',async()
   h.click({menuItemId:'plamo-translate-selection',selectionText:'Hello'},{id:9});
   await settle();
   assert.equal(h.injections().length,1);assert.deepEqual(h.sent(),[]);
+});
+
+test('injection failure displays an error badge and reason',async()=>{
+  const h=harness({failInjection:true});
+  h.click({menuItemId:'plamo-translate-selection',selectionText:'Hello'},{id:9});await settle();
+  assert.equal(h.badges().at(-1).text,'!');
+  assert.match(h.titles().at(-1).title,/このページでは実行できません/);
+});
+test('missing content-script response is an error, not a successful start',async()=>{
+  const h=harness({response:null});
+  h.click({menuItemId:'plamo-translate-selection',selectionText:'Hello'},{id:9});await settle();
+  assert.equal(h.badges().at(-1).text,'!');
+  assert.match(h.titles().at(-1).title,/ページから応答がありません/);
 });
