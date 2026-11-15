@@ -75,8 +75,8 @@ test('choosing the menu item injects the page script and sends the selected text
   const h=harness();
   h.click({menuItemId:'plamo-translate-selection',selectionText:'The meeting has been moved.',frameId:3},{id:42});
   await settle();
-  assert.deepEqual(h.injections(),[{target:{tabId:42,frameIds:[0]},files:['content.js']}]);
-  assert.deepEqual(h.sent(),[{tabId:42,message:{destination:'page',type:'translate-selection',text:'The meeting has been moved.'},options:{frameId:0}}]);
+  assert.deepEqual(h.injections(),[{target:{tabId:42,frameIds:[3]},files:['content.js']}]);
+  assert.deepEqual(h.sent(),[{tabId:42,message:{destination:'page',type:'translate-selection',text:'The meeting has been moved.'},options:{frameId:3}}]);
 });
 test('empty selections, other menu items and tabs without ids do nothing',async()=>{
   const h=harness();

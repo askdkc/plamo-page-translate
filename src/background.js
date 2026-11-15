@@ -44,18 +44,18 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// The page popup renders the result, so only the selected text travels to the page.
-async function translateSelection(tabId, selectionText) {
+// Inject into the frame that owns the selection so its DOM can be updated.
+async function translateSelection(tabId, selectionText, frameId = 0) {
   const text = typeof selectionText === 'string' ? selectionText : '';
   if (!text.trim()) return;
-  await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: ['content.js'] });
-  const response = await chrome.tabs.sendMessage(tabId, { destination: 'page', type: 'translate-selection', text }, { frameId: 0 });
+  await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, files: ['content.js'] });
+  const response = await chrome.tabs.sendMessage(tabId, { destination: 'page', type: 'translate-selection', text }, { frameId });
   if (response?.ok === false) throw new Error(response.error);
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== SELECTION_MENU_ID || !tab?.id) return;
-  void translateSelection(tab.id, info.selectionText).catch(error => console.warn('選択部分を翻訳できませんでした。', error));
+  void translateSelection(tab.id, info.selectionText, info.frameId).catch(error => console.warn('選択部分を翻訳できませんでした。', error));
 });
 
 async function dispatch(message, sender) {

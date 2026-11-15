@@ -48,6 +48,10 @@ try {
   }));
   assert.equal(menu.ok, true, `context menu registration: ${JSON.stringify(menu)}`);
 
+  await page.evaluate(() => {
+    const range = document.createRange(); range.selectNodeContents(document.querySelector('#paragraph'));
+    const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  });
   const answer = await worker.evaluate(async text => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content.js'] });
@@ -58,36 +62,26 @@ try {
   const began = Date.now();
   let state;
   while (Date.now() - began < 240000) {
-    state = await page.evaluate(() => {
-      const host = document.querySelector('[data-plamobrave-ui]');
-      if (!host) return null;
-      const panel = host.shadowRoot.querySelector('aside');
-      const box = host.getBoundingClientRect();
-      return {
-        state: panel.dataset.state,
-        text: host.shadowRoot.querySelector('[role=status]').textContent,
-        box: { left: box.left, top: box.top, right: box.right, bottom: box.bottom },
-        viewport: { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight },
-      };
+    state = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return chrome.tabs.sendMessage(tab.id, { destination: 'page', type: 'status' }, { frameId: 0 });
     });
-    if (state && state.state !== 'busy') break;
+    if (state && ['done', 'error'].includes(state.phase)) break;
     await new Promise(wait => setTimeout(wait, 1000));
   }
-  assert.ok(state, 'selection panel was not rendered');
-  assert.equal(state.state, 'ready', `selection panel: ${JSON.stringify(state)}`);
-  assert.match(state.text, /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u);
-  assert.ok(state.box.left >= 11 && state.box.top >= 11 && state.box.right <= state.viewport.width - 11 && state.box.bottom <= state.viewport.height - 11, `panel inside viewport: ${JSON.stringify(state)}`);
-  assert.equal(await page.locator('#paragraph').innerText(), 'The meeting has been moved to next Monday.');
+  assert.equal(state?.phase, 'done', JSON.stringify(state));
+  const translation = await page.locator('#paragraph').innerText();
+  assert.match(translation, /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u);
   assert.equal(await page.locator('#keep').innerText(), 'Keep this text unchanged.');
+  assert.equal(await page.getByRole('complementary', { name: '選択部分の翻訳' }).count(), 0);
   await mkdir('artifacts', { recursive: true });
-  await page.screenshot({ path: 'artifacts/selection-popup.png' });
-
-  await page.evaluate(() => document.querySelector('[data-plamobrave-ui]').shadowRoot.querySelector('button').click());
-  assert.equal(await page.locator('[data-plamobrave-ui]').count(), 0);
-  console.log('TRANSLATION:', state.text);
+  await page.screenshot({ path: 'artifacts/selection-inline.png' });
+  await page.locator('[data-plamobrave-ui]').locator('#restore').click();
+  assert.equal(await page.locator('#paragraph').innerText(), 'The meeting has been moved to next Monday.');
+  console.log('TRANSLATION:', translation);
   if (errors.length) console.log('Page console errors:', errors);
-  console.log('PASS: context menu registered / selection translated through the bundled model / popup closes / page text unchanged');
-  await writeFile('artifacts/selection-result.json', JSON.stringify({ passed: true, translation: state.text, errors }, null, 2));
+  console.log('PASS: context menu registered / selection translated through the bundled model / page text replaced / original restored / unselected text unchanged');
+  await writeFile('artifacts/selection-result.json', JSON.stringify({ passed: true, translation, errors }, null, 2));
 } finally {
   await context?.close();
   await new Promise(resolveClose => server.close(resolveClose));

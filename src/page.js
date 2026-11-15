@@ -3,7 +3,8 @@ const EXCLUDED = 'script,style,noscript,template,textarea,input,select,option,co
 export class PageText {
   constructor(document) { this.document = document; this.originals = new Map(); }
 
-  collect() {
+  collect(range = null) {
+    if (range?.collapsed) return [];
     const entries = [];
     const visit = root => {
       if (root.nodeType === 1 && root.matches(EXCLUDED)) return;
@@ -29,13 +30,20 @@ export class PageText {
           continue;
         }
         const textNode = node, previous = this.originals.get(textNode);
-        // Retranslate from the original, unless the site has since changed it.
-        const text = previous && textNode.data === previous.translated ? previous.original : textNode.data;
+        if (range && !range.intersectsNode(textNode)) continue;
         const observed = textNode.data;
+        const start = range?.startContainer === textNode ? range.startOffset : 0;
+        const end = range?.endContainer === textNode ? range.endOffset : observed.length;
+        if (start >= end) continue;
+        const original = previous && observed === previous.translated ? previous.original : observed;
+        // Partial selections use current offsets; whole-page translation uses the original.
+        const text = range ? observed.slice(start, end) : original;
+        if (!/\p{L}/u.test(text)) continue;
         entries.push({ text, apply: translated => {
           if (!textNode.isConnected || textNode.data !== observed) return;
-          this.originals.set(textNode, { original: text, translated });
-          textNode.data = translated;
+          const replacement = range ? observed.slice(0, start) + translated + observed.slice(end) : translated;
+          this.originals.set(textNode, { original, translated: replacement });
+          textNode.data = replacement;
         } });
       }
     };
